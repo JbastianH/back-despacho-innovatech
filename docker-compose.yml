@@ -1,0 +1,26 @@
+services:
+  db-despacho:
+    image: mysql:8.0
+    container_name: db-despacho
+    environment:
+      MYSQL_DATABASE: db_despacho
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - [cite_start]vol_db_despacho:/var/lib/mysql # IE3: Persistencia de datos [cite: 33]
+
+  back-despacho:
+    image: 772895821453.dkr.ecr.us-east-1.amazonaws.com/back-despacho-repo:latest
+    container_name: back-despacho
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-despacho:3306/db_despacho
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      - db-despacho
+
+volumes:
+  vol_db_despacho:
