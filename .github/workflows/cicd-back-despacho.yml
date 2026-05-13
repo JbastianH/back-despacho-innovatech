@@ -49,7 +49,7 @@ jobs:
         run: |
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=instanceids,Values=i-i-01f6fbf95b17dd8e1" \
+            --targets "Key=instanceids,Values=i-01f6fbf95b17dd8e1" \
             --comment "Se actualiza el microservicio de Despacho en producción" \
             --parameters 'commands=[
               "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 772895821453.dkr.ecr.us-east-1.amazonaws.com",
