@@ -1,15 +1,5 @@
 services:
-  db-despacho:
-    image: mysql:8.0
-    container_name: db-despacho
-    environment:
-      MYSQL_DATABASE: db_despacho
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "3306:3306"
-    volumes:
-      - [cite_start]vol_db_despacho:/var/lib/mysql # IE3: Persistencia de datos [cite: 33]
-
+ 
   back-despacho:
     image: 772895821453.dkr.ecr.us-east-1.amazonaws.com/back-despacho-repo:latest
     container_name: back-despacho
