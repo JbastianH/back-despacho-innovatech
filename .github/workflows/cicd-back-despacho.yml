@@ -58,7 +58,7 @@ jobs:
               \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $REGISTRY\",
               \"docker pull $REGISTRY/$ECR_REPOSITORY:latest\",
               \"docker rm -f msv-despacho || true\",
-              \"docker run -d -p 8082:8081 --name msv-despacho -e DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} -e DB_PORT=3306 -e DB_NAME=despacho_db -e DB_USERNAME=${{ secrets.DB_USERNAME }} -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} $REGISTRY/$ECR_REPOSITORY:latest\",
+              \"docker run -d --restart always -p 8082:8081 --name msv-despacho -e DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} -e DB_PORT=3306 -e DB_NAME=despacho_db -e DB_USERNAME=${{ secrets.DB_USERNAME }} -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} $REGISTRY/$ECR_REPOSITORY:latest\",
               \"docker image prune -f\"
             ]" \
             --region ${{ env.AWS_REGION }}
