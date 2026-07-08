@@ -1,4 +1,4 @@
-name: Despliegue Backend a Amazon ECR
+name: Despliegue Backend Despachos a EKS
 
 on:
   push:
@@ -6,8 +6,10 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  # Esta linea de abajo toma el nombre del repo de GitHub automaticamente.
-  ECR_REPOSITORY: ${{ github.event.repository.name }} 
+  # Se define el repositorio exacto de ECR creado para este microservicio
+  ECR_REPOSITORY: examen-back-despacho
+  # Se define el nombre del cluster EKS
+  EKS_CLUSTER_NAME: cluster-examen
 
 jobs:
   deploy:
@@ -24,6 +26,7 @@ jobs:
           cache: maven
 
       - name: Compilar proyecto con Maven (Generar JAR)
+        # Se genera el ejecutable omitiendo las pruebas para agilizar el despliegue
         run: mvn -B package -DskipTests
 
       - name: Configurar credenciales de AWS
@@ -41,24 +44,20 @@ jobs:
       - name: Construir imagen Docker y subir a la nube
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        # Se compila la imagen localmente y se transfiere al registro de ECR
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-      # Se define el paso para desplegar en la instancia EC2 mediante AWS Systems Manager (SSM).
-      - name: Deploy to EC2 via SSM
-        run: |
-          # Obtenemos la URL de tu repositorio ECR dinámicamente
-          REGISTRY=${{ steps.login-ecr.outputs.registry }}
+          
+      - name: Conectar al Cluster EKS
+        # Se actualiza el archivo kubeconfig del entorno de integracion con las credenciales del cluster
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
 
-          aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --instance-ids "i-01f6fbf95b17dd8e1" \
-            --comment "Se actualiza el microservicio de Despacho en producción" \
-            --parameters "commands=[
-              \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $REGISTRY\",
-              \"docker pull $REGISTRY/$ECR_REPOSITORY:latest\",
-              \"docker rm -f msv-despacho || true\",
-              \"docker run -d --restart always -p 8082:8081 --name msv-despacho -e DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} -e DB_PORT=3306 -e DB_NAME=despacho_db -e DB_USERNAME=${{ secrets.DB_USERNAME }} -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} $REGISTRY/$ECR_REPOSITORY:latest\",
-              \"docker image prune -f\"
-            ]" \
-            --region ${{ env.AWS_REGION }}
+      - name: Desplegar en Kubernetes
+        # Se asegura la existencia del namespace y se aplican los manifiestos de infraestructura
+        run: |
+          kubectl create namespace examen --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/despachos-deployment.yaml -n examen
+          kubectl apply -f k8s/despachos-service.yaml -n examen
+          kubectl apply -f k8s/despachos-hpa.yaml -n examen
+          kubectl rollout restart deployment back-despachos-deployment -n examen
